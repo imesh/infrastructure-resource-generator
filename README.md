@@ -21,6 +21,7 @@ Follow below steps to get started with Gerador:
 3. Build the source code:
 
    ````bash
+   cd gerador
    go build
    ````
 
@@ -28,6 +29,13 @@ Follow below steps to get started with Gerador:
 
    ```bash
    ./gerador
+   ```
+
+5. Switch to the output folder and view the generated files:
+
+   ```bash
+   cd output/
+   tree
    ```
 
 ## Deployment Specification
