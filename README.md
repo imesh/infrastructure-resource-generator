@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# infrastructure-resource-generator
-=======
 # Infrastructure Resource Generator
 
 Infrastructure resource generator is a command line tool for generating resources required for 
@@ -52,4 +49,25 @@ components:  # List of components
       initialDelaySeconds: Initial delay in seconds
       periodSeconds: Period in seconds
 ````
->>>>>>> 9e1b6a4... Initial implementation
+
+## Getting Started
+
+Follow below steps to get started with Gerador:
+
+1. Clone this repository:
+   
+   ```
+   git clone https://github.com/imesh/gerador
+   ```
+
+2. Build the source code:
+
+   ````bash
+   go build
+   ````
+
+3. Run the binary:
+
+   ```bash
+   ./gerador
+   ```
