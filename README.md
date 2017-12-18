@@ -8,34 +8,40 @@ support Kubernetes, OpenShift, Pivotal Cloud Foundry, DC/OS, AWS, Azure and Goog
 
 ## Getting Started
 
-Follow below steps to get started with Gerador:
+Follow below steps to get started:
 
 1. Install the [Go tools](https://golang.org/doc/install) by following the official installation guide.
 
 2. Clone this repository:
    
    ```
-   git clone https://github.com/imesh/gerador
+   git clone https://github.com/wso2-incubator/infrastructure-resource-generator
    ```
 
 3. Build the source code:
 
    ````bash
-   cd gerador
+   cd infrastructure-resource-generator
    go build
    ````
 
 4. Run the binary:
 
    ```bash
-   ./gerador
+   ./infrastructure-resource-generator
    ```
 
 5. Switch to the output folder and view the generated files:
 
    ```bash
    cd output/
-   tree
+   output$ tree
+    .
+    └── docker
+        ├── wso2am
+        │   └── Dockerfile
+        └── wso2am-analytics
+            └── Dockerfile
    ```
 
 ## Deployment Specification
