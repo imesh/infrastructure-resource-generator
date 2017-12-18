@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Compiled class file
 *.class
 
@@ -20,3 +21,24 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+=======
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+gerador
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output folder
+output/
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IntelliJ IDEA
+.idea/
+*.iml
+>>>>>>> 9e1b6a4... Initial implementation
