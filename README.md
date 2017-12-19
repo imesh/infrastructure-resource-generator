@@ -6,6 +6,12 @@ specification for defining the deployment architecture and a set of templates fo
 resources required. Currently, it supports Docker and Docker Compose. It will be extended to
 support Kubernetes, OpenShift, Pivotal Cloud Foundry, DC/OS, AWS, Azure and Google Cloud.
 
+## Architecture
+
+![](images/architecture.png)
+
+The above diagram illustrates the architecture of the Infrastructure Resource Generator.
+
 ## Getting Started
 
 Follow below steps to get started:
@@ -37,16 +43,27 @@ Follow below steps to get started:
    cd output/
    output$ tree
     .
-    └── docker
-        ├── wso2am
-        │   └── Dockerfile
-        └── wso2am-analytics
-            └── Dockerfile
+    ├── docker
+    │   ├── wso2am
+    │   │   └── Dockerfile
+    │   ├── wso2am-analytics
+    │   │   └── Dockerfile
+    │   └── wso2is
+    │       └── Dockerfile
+    └── docker-compose
+        ├── wso2apim
+        │   └── pattern-1
+        │       └── docker-compose.yml
+        └── wso2is
+            └── pattern-1
+                └── docker-compose.yml
    ```
 
 ## Deployment Specification
 
-The archigos deployment specification has been designed according to standards and guidelines used by Docker, Docker Compose, Kubernetes, DC/OS, AWS Cloud Formation to be able to provide a generic definition for any software deployment:
+The following deployment specification has been designed according to standards and guidelines used by Docker, Docker 
+Compose, Kubernetes, DC/OS, AWS CloudFormation, etc for providing a generic definition for any WSO2 deployment on well 
+known infrastructure platforms:
 
 ````yaml
 specVersion: 0.1
