@@ -51,44 +51,53 @@ The archigos deployment specification has been designed according to standards a
 ````yaml
 specVersion: 0.1
 kind: Deployment
-name: Name of the deployment
-version: Version of the deployment
+name: Name of the deployment # string
+version: Version of the deployment # string
 components:  # List of components
--
-  name: Name of the component
-  codeName: Code name of the component
-  version: Version of the component
-  cpu: Number of CPUs required
-  memory: Amount of memory required 
-  disk: Amount of disk space required
-  distribution: Distribution file name
-  entrypoint: Startup script
-  replicas: Number of replicas
-  scalable: Scalable or not
-  clustering: Clustering needed or not
-  ports:
-  -
-    name: Port name
-    protocol: Protocol of the port
-    port: Port number exposed
-    external: Port need to be exposed externally or not
-    sessionAffinity: Session affinity required or not
+- name: Name # string
+  codeName: Code name # string 
+  version: Version # string
+  cpu: Number of CPUs required # integer
+  memory: Amount of memory required  # string
+  disk: Amount of disk space required # string
+  distribution: Distribution file name # string
+  entrypoint: Startup script # string
+  image: VM or container image if third party component # string
+  replicas: Number of replicas # integer
+  scalable: Scalable or not # boolean
+  clustering: Clustering needed or not # boolean
   databases:
-  -
-    name: Database name
-    createScript: Path of the database creation script
-  dependencies:
-  -
-    component: Dependent component code name
+  - name: Database name # string
+    type: Database type; MySQL, Postgres, Oracle, MSMSQL, MariaDB # string
+    version: Database version # string
+    createScript: Path of the database creation script # string
+  volumes:
+  - source path:destination path # string
+  ports:
+  - name: Port name # string
+    protocol: Protocol of the port # string
+    port: Port number exposed by the server # integer
+    external: Port needs to be exposed externally or not # boolean
+    sessionAffinity: Session affinity required or not # boolean
+  services:
+  - name: Service name # string
     ports:
-    - Name of the dependent component port used
-  livenessProbe:
+    - Port name reference # string
+  ingresses:
+  - name: Ingress name # string
+    ports:
+    - Port name reference # string
+  dependencies:
+  - component: Dependent component code name reference # string
+    ports:
+    - Name of the dependent component port used # string
+  healthcheck:
     # Define either httpGet or tcpSocket
-    httpGet: # HTTP liveness probe
-      path: Context path of the HTTP endpoint
-      port: Port of the HTTP endpoint
-    tcpSocket: # TCP liveness probe
-      port: TCP port to be used by the probe
-    initialDelaySeconds: Initial delay in seconds
-    periodSeconds: Period in seconds
+    httpGet:
+      path: Context path of the HTTP endpoint # string
+      port: Port of the HTTP endpoint # integer
+    tcpSocket:
+      port: TCP port to be used by the health check # integer
+    initialDelaySeconds: Initial delay in seconds # integer
+    periodSeconds: Period in seconds # integer
 ````
