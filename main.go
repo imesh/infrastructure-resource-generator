@@ -10,9 +10,73 @@ import (
 	"path/filepath"
 	"flag"
 	"fmt"
+	"strconv"
 )
 
 const pathSeparator = string(os.PathSeparator)
+
+type Port struct {
+	Name            string
+	Protocol        string
+	Port            int
+	HostPort        int
+	External        bool
+	SessionAffinity bool
+}
+
+type Ingress struct {
+	Name  string
+	Ports [] string
+}
+
+type Component struct {
+	Name         string
+	CodeName     string
+	Version      string
+	Labels       [] map[string]interface{}
+	Cpu          string
+	Memory       string
+	Disk         string
+	Distribution string
+	Entrypoint   string
+	Image        string
+	Replicas     int
+	Scalable     bool
+	Clustering   bool
+	Environment  [] map[string]interface{}
+	Databases [] struct {
+		Name         string
+		Type         string
+		Version      string
+		CreateScript string
+	}
+	Volumes []string
+	Ports   [] Port
+	Services [] struct {
+		Name  string
+		Ports [] string
+	}
+	Ingresses [] Ingress
+	Dependencies [] struct {
+		Component string
+		Ports     [] string
+	}
+	Healthcheck struct {
+		Command struct {
+			Assertion []string
+		}
+		TcpSocket struct {
+			Port int
+		}
+		HttpGet struct {
+			Path string
+			Port int
+		}
+		InitialDelaySeconds int
+		PeriodSeconds       int
+		TimeoutSeconds      int
+	}
+}
 
 type Deployment struct {
 	ApiVersion string
@@ -20,53 +84,44 @@ type Deployment struct {
 	Name       string
 	Version    string
 	Labels     [] map[string]interface{}
-	Components [] struct {
-		Name         string
-		CodeName     string
-		Version      string
-		Cpu          string
-		Memory       string
-		Disk         string
-		Distribution string
-		Entrypoint   string
-		Image        string
-		Replicas     int32
-		Scalable     bool
-		Clustering   bool
-		Environment  []string
-		Volumes      []string
-		Ports [] struct {
-			Name            string
-			Protocol        string
-			Port            int32
-			HostPort        int32
-			External        bool
-			SessionAffinity bool
-		}
-		Databases [] struct {
-			Name         string
-			CreateScript string
-		}
-		Dependencies [] struct {
-			Component string
-			Ports     [] string
-		}
-		Healthcheck struct {
-			Command struct {
-				Assertion []string
+	Components [] Component
+}
+
+func (ingress Ingress) FindExcludePorts(ports [] Port) string {
+	var excludePorts string
+    for _, port := range ports {
+    	found := false
+    	for _, ingressPort := range ingress.Ports {
+    		if port.Name == ingressPort {
+    			found = true
+    			break
 			}
-			TcpSocket struct {
-				Port int32
+		}
+		if !found {
+			if excludePorts != "" {
+				excludePorts = excludePorts + ","
 			}
-			HttpGet struct {
-				Path string
-				Port int32
-			}
-			InitialDelaySeconds int32
-			PeriodSeconds       int32
-			TimeoutSeconds      int32
+			excludePorts = excludePorts + strconv.Itoa(port.Port)
 		}
 	}
+	return excludePorts
+}
+
+func (deployment Deployment) FindIngresses() []string {
+	var ingresses [] string
+	for _, component := range deployment.Components {
+		if len(component.Ingresses) > 0 {
+			ingresses = append(ingresses, component.Name)
+		}
+	}
+	return ingresses
+}
+
+func (component Component) FindImage() string {
+	if component.Image != "" {
+		return component.Image
+	}
+	return component.CodeName + ":" + component.Version
 }
 
 func getDeployment(filePath string) *Deployment {
@@ -165,7 +220,7 @@ func generate(executionPath string, deploymentsFolderPath string, filePath strin
 }
 
 func main() {
-	executionPath := os.Getenv("ARCHIGOS_HOME");
+	executionPath := os.Getenv("IRG_HOME");
 	if (len(executionPath) <= 0) {
 		ex, err := os.Executable()
 		if err != nil {

@@ -1,12 +1,29 @@
 version: '2.3'
-services:{{range .Components}}
+services:
+  mysql:
+    image: mysql:5.7.19
+    ports:
+      - 3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=wso2carbon
+    volumes:
+      - ./mysql/scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pwso2carbon"]
+      start_period: 5s
+      interval: 5s
+      timeout: 60s{{range $index, $component := .Components}}
   {{.Name}}:
-    image: {{.Image}}
-    ports:{{range.Ports}}
-      - {{.Port}}{{if .HostPort}}:{{.HostPort}}{{end}}{{end}}{{if .Environment}}
+    image: {{.FindImage}}
+    ports:{{range .Ports}}
+      - {{.Port}}{{if .HostPort}}:{{.HostPort}}{{end}}{{end}}{{if or .Environment .Ingresses}}
     environment:{{range .Environment}}
-      - {{.}}{{end}}{{end}}
-    volumes:{{range.Volumes}}
+      - {{.}}{{end}}{{range .Ingresses}}
+      - EXCLUDE_PORTS={{.FindExcludePorts $component.Ports}}
+      - VIRTUAL_HOST=https://{{.Name}}
+      - EXTRA_ROUTE_SETTINGS=ssl check verify none
+      - BALANCE=source{{end}}{{end}}
+    volumes:{{range .Volumes}}
       - {{.}}{{end}}{{if .Healthcheck.Command.Assertion}}
     healthcheck:
       test: [{{$n := len .Healthcheck.Command.Assertion}}{{range  $i, $e := .Healthcheck.Command.Assertion}}{{if $i}}, {{end}}"{{.}}"{{end}}]
@@ -23,3 +40,19 @@ services:{{range .Components}}
         condition: service_healthy{{end}}
     links:{{range .Dependencies}}
       - {{.Component}}{{end}}{{end}}{{end}}
+  haproxy:
+    image: dockercloud/haproxy:1.6.3
+    ports:
+      - 443:443
+    environment:
+      - TIMEOUT=connect 50000, client 50000, server 50000
+      - STATS_AUTH=stats:stats
+      - CERT_FOLDER=/certs/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./haproxy/cert1.pem:/certs/cert1.pem
+    depends_on:{{range .FindIngresses}}
+      {{.}}:
+        condition: service_healthy{{end}}
+    links:{{range .FindIngresses}}
+      - {{.}}{{end}}
