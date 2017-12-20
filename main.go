@@ -20,12 +20,20 @@ type Port struct {
 	Port            int
 	HostPort        int
 	External        bool
+}
+
+type Service struct {
+	Component Component
+	Name      string
+	PortNames [] string
+	Ports     [] Port
 	SessionAffinity bool
 }
 
 type Ingress struct {
-	Name  string
-	Ports [] string
+	Name      string
+	PortNames [] string
+	Ports     [] Port
 }
 
 type Component struct {
@@ -49,12 +57,14 @@ type Component struct {
 		Version      string
 		CreateScript string
 	}
-	Volumes []string
-	Ports   [] Port
-	Services [] struct {
-		Name  string
-		Ports [] string
+	Volumes [] struct {
+		Name       string
+		Type       string
+		SourcePath string
+		MountPath  string
 	}
+	Ports     [] Port
+	Services  [] Service
 	Ingresses [] Ingress
 	Dependencies [] struct {
 		Component string
@@ -88,12 +98,12 @@ type Deployment struct {
 
 func (ingress Ingress) FindExcludePorts(ports [] Port) string {
 	var excludePorts string
-    for _, port := range ports {
-    	found := false
-    	for _, ingressPort := range ingress.Ports {
-    		if port.Name == ingressPort {
-    			found = true
-    			break
+	for _, port := range ports {
+		found := false
+		for _, ingressPort := range ingress.Ports {
+			if port.Name == ingressPort.Name {
+				found = true
+				break
 			}
 		}
 		if !found {
@@ -123,18 +133,48 @@ func (component Component) FindImage() string {
 	return component.CodeName + ":" + component.Version
 }
 
-func getDeployment(filePath string) *Deployment {
+func (component Component) FindPattern() string {
+	// TODO: Find pattern
+	return "pattern-1"
+}
+
+func (component Component) FindKubernetesImage() string {
+	return component.CodeName + "-kubernetes:" + component.Version
+}
+
+func getDeployment(filePath string) Deployment {
 	log.Infoln("Reading deployment:", filePath)
 	yamlFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Error reading file: %v %v", filePath, err)
 	}
-	var c *Deployment = new(Deployment)
-	err = yaml.Unmarshal(yamlFile, c)
+	var deployment *Deployment = new(Deployment)
+	err = yaml.Unmarshal(yamlFile, deployment)
 	if err != nil {
 		log.Fatalf("Error parsing yaml file: %v %v", filePath, err)
 	}
-	return c
+
+	// Set service -> component references, service.ports
+	for _, component := range deployment.Components {
+		for _, service := range component.Services {
+			service.Component = component
+			service.Ports = [] Port{}
+			for _, portName := range service.PortNames {
+				port := findPort(component, portName)
+				service.Ports = append(service.Ports, port)
+			}
+		}
+	}
+	return *deployment
+}
+
+func findPort(component Component, portName string) Port {
+	for _, port := range component.Ports {
+		if port.Name == portName {
+			return port
+		}
+	}
+	return Port{}
 }
 
 func applyTemplate(templateFilePath string, outputFilePath string, data interface{}) {
@@ -171,14 +211,24 @@ func init() {
 }
 
 // Generate infrastructure resources for a given deployment
-func generate(executionPath string, deploymentsFolderPath string, filePath string) {
-	deployment := getDeployment(filePath)
-	generateDockerFiles(deployment, executionPath)
-	generateDockerComposeTemplate(executionPath, filePath, deploymentsFolderPath, deployment)
+func generate(executionPath string, deploymentsFolderPath string, deploymentFilePath string) {
+	deployment := getDeployment(deploymentFilePath)
+	deploymentFileFolderPath := strings.Replace(deploymentFilePath, filepath.Base(deploymentFilePath), "", 1)
+	subFolderPath := strings.Replace(deploymentFileFolderPath, deploymentsFolderPath, "", 1)
+
+	templatesFolderPath := executionPath + pathSeparator + "templates"
+	outputFolderPath := executionPath + pathSeparator + "output"
+
+	dockerFileTemplPath := templatesFolderPath + pathSeparator + "docker" + pathSeparator + "Dockerfile-template"
+	dockerFileOutputFolderPath := outputFolderPath + pathSeparator + "docker"
+
+	generateDockerFiles(dockerFileTemplPath, dockerFileOutputFolderPath, deployment)
+	generateDockerComposeTemplate(templatesFolderPath, outputFolderPath, subFolderPath, deployment)
+	generateKubernetesResources(templatesFolderPath, outputFolderPath, subFolderPath, deployment)
 }
 
 // Generate dockerfiles for components found in a given deployment
-func generateDockerFiles(deployment *Deployment, executionPath string) {
+func generateDockerFiles(templateFilePath string, outputFolderPath string, deployment Deployment) {
 	componentNamesMap := map[string]bool{}
 	for _, component := range deployment.Components {
 		// Read component code name
@@ -188,35 +238,61 @@ func generateDockerFiles(deployment *Deployment, executionPath string) {
 		}
 
 		if _, ok := componentNamesMap[codeName]; ok {
-			// Dockerfile already generated for component
+			// Dockerfile already generated for the selected component
 			continue
 		}
 		if component.Image != "" {
-			// Docker image specified, do not require to generate dockerfile
+			// Docker image specified, do not need to generate a dockerfile
 			continue
 		}
 
 		componentNamesMap[codeName] = true
-		templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker" + pathSeparator + "Dockerfile-template"
-		outputFilePath := executionPath + pathSeparator + "output" + pathSeparator + "docker" + pathSeparator + codeName + pathSeparator + "Dockerfile"
-		applyTemplate(templatePath, outputFilePath, component)
+		outputFilePath := outputFolderPath + pathSeparator + codeName + pathSeparator + "Dockerfile"
+		applyTemplate(templateFilePath, outputFilePath, component)
 	}
 }
 
 // Generate docker compose template for a given deployment
-func generateDockerComposeTemplate(executionPath string, filePath string, deploymentsFolderPath string, deployment *Deployment) {
-	// Generate docker compose template
-	templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker-compose" + pathSeparator + "docker-compose-template.yaml"
-	outputFilePath := executionPath + pathSeparator + "output" + pathSeparator + "docker-compose"
+func generateDockerComposeTemplate(templateFolderPath string, outputFolderPath string, subFolderPath string, deployment Deployment) {
+	templateFilePath := templateFolderPath + pathSeparator + "docker-compose" + pathSeparator + "docker-compose-template.yaml"
+	outputFilePath := outputFolderPath + pathSeparator + "docker-compose"
+
 	// Append sub folder path
-	fileFolderPath := strings.Replace(filePath, filepath.Base(filePath), "", 1)
-	subFolderPath := strings.Replace(fileFolderPath, deploymentsFolderPath, "", 1)
 	if subFolderPath != "" {
 		outputFilePath = outputFilePath + subFolderPath + "docker-compose.yml"
 	} else {
 		outputFilePath = outputFilePath + pathSeparator + "docker-compose.yml"
 	}
-	applyTemplate(templatePath, outputFilePath, deployment)
+	applyTemplate(templateFilePath, outputFilePath, deployment)
+}
+
+func generateKubernetesResources(templateFolderPath string, outputFolderPath string, subFolderPath string, deployment Deployment) {
+	k8sTemplateFolderPath := templateFolderPath + pathSeparator + "kubernetes"
+	k8sOutputFolderPath := outputFolderPath + pathSeparator + "kubernetes" + subFolderPath
+
+	k8sDockerFileTemplPath := k8sTemplateFolderPath + pathSeparator + "Dockerfile-template"
+	k8sDockerFilesFolderPath := k8sOutputFolderPath + pathSeparator + "dockerfiles"
+
+	generateDockerFiles(k8sDockerFileTemplPath, k8sDockerFilesFolderPath, deployment)
+	for _, component := range deployment.Components {
+		generateKubernetesDeployment(k8sTemplateFolderPath, k8sOutputFolderPath, component)
+	}
+}
+
+func generateKubernetesDeployment(k8sTemplateFolderPath string, k8sOutputFolderPath string, component Component) {
+	k8sDeploymentTemplPath := k8sTemplateFolderPath + pathSeparator + "deployment-template.yaml"
+	k8sDeploymentOutputPath := k8sOutputFolderPath + component.Name + "-deployment.yaml"
+	applyTemplate(k8sDeploymentTemplPath, k8sDeploymentOutputPath, component)
+
+	for _, service := range component.Services {
+		generateKubernetesService(k8sTemplateFolderPath, k8sOutputFolderPath, service)
+	}
+}
+
+func generateKubernetesService(k8sTemplateFolderPath string, k8sOutputFolderPath string, service Service) {
+	k8sServiceTemplPath := k8sTemplateFolderPath + pathSeparator + "service-template.yaml"
+	k8sServiceOutputPath := k8sOutputFolderPath + service.Name + "-service.yaml"
+	applyTemplate(k8sServiceTemplPath, k8sServiceOutputPath, service)
 }
 
 func main() {

@@ -12,19 +12,27 @@ components:
   distribution: wso2is-5.4.0.zip
   entrypoint: bin/wso2server.sh
   replicas: 1
-  scalable: false
-  clustering: false
+  scalable: true
+  clustering: true
   databases:
   - name: WSO2IS-DB
     type: MySQL
     version: 5.7.19
     createScript: database-scripts/wso2is-db.sql
   volumes:
-  - ./identity-server/repository/components/lib/mysql-connector-java-5.1.34-bin.jar:/home/wso2carbon/wso2is-5.4.0/repository/components/lib/mysql-connector-java-5.1.34-bin.jar
-  - ./identity-server/repository/conf/carbon.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/carbon.xml
-  - ./identity-server/repository/conf/axis2/axis2-1.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/axis2/axis2.xml
-  - ./identity-server/repository/conf/datasources/master-datasources.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/datasources/master-datasources.xml
-  - ./identity-server/repository/conf/tomcat/catalina-server.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/tomcat/catalina-server.xml
+  - name: repository-components-lib
+    type: Extensions
+    sourcePath: ./identity-server/repository/components/lib
+    mountPath: /home/wso2carbon/wso2is-5.4.0/repository/components/lib
+  - name: repository-conf
+    type: Config
+    sourcePath: ./identity-server/repository/conf
+    mountPath: /home/wso2carbon/wso2is-5.4.0/repository/conf
+#  - ./identity-server/repository/components/lib/mysql-connector-java-5.1.34-bin.jar:/home/wso2carbon/wso2is-5.4.0/repository/components/lib/mysql-connector-java-5.1.34-bin.jar
+#  - ./identity-server/repository/conf/carbon.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/carbon.xml
+#  - ./identity-server/repository/conf/axis2/axis2-1.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/axis2/axis2.xml
+#  - ./identity-server/repository/conf/datasources/master-datasources.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/datasources/master-datasources.xml
+#  - ./identity-server/repository/conf/tomcat/catalina-server.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/tomcat/catalina-server.xml
   ports:
   - name: servlet-http
     protocol: HTTP
@@ -43,12 +51,12 @@ components:
     sessionAffinity: false
   services:
   - name: wso2is
-    ports:
+    portNames:
     - servlet-https
     - hazelcast
   ingresses:
   - name: wso2is
-    ports:
+    portNames:
     - servlet-https
   dependencies:
   - component: mysql
@@ -70,47 +78,45 @@ components:
   distribution: wso2is-5.4.0.zip
   entrypoint: bin/wso2server.sh
   replicas: 1
-  scalable: false
-  clustering: false
+  scalable: true
+  clustering: true
   databases:
   - name: WSO2IS-DB
     type: MySQL
     version: 5.7.19
     createScript: database-scripts/wso2is-db.sql
   volumes:
-  - ./identity-server/repository/components/lib/mysql-connector-java-5.1.34-bin.jar:/home/wso2carbon/wso2is-5.4.0/repository/components/lib/mysql-connector-java-5.1.34-bin.jar
-  - ./identity-server/repository/conf/carbon.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/carbon.xml
-  - ./identity-server/repository/conf/axis2/axis2-1.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/axis2/axis2.xml
-  - ./identity-server/repository/conf/datasources/master-datasources.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/datasources/master-datasources.xml
-  - ./identity-server/repository/conf/tomcat/catalina-server.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/tomcat/catalina-server.xml
+#  - ./identity-server/repository/components/lib/mysql-connector-java-5.1.34-bin.jar:/home/wso2carbon/wso2is-5.4.0/repository/components/lib/mysql-connector-java-5.1.34-bin.jar
+#  - ./identity-server/repository/conf/carbon.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/carbon.xml
+#  - ./identity-server/repository/conf/axis2/axis2-1.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/axis2/axis2.xml
+#  - ./identity-server/repository/conf/datasources/master-datasources.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/datasources/master-datasources.xml
+#  - ./identity-server/repository/conf/tomcat/catalina-server.xml:/home/wso2carbon/wso2is-5.4.0/repository/conf/tomcat/catalina-server.xml
   ports:
   - name: servlet-http
     protocol: HTTP
     port: 9763
     external: true
-    sessionAffinity: true
   - name: servlet-https
     protocol: HTTPS
     port: 9443
     external: true
-    sessionAffinity: true
   - name: hazelcast
     protocol: TCP
     port: 4000
     external: false
-    sessionAffinity: false
   services:
   - name: wso2is
-    ports:
+    portNames:
     - servlet-https
     - hazelcast
+    sessionAffinity: true
   ingresses:
   - name: wso2is
-    ports:
+    portNames:
     - servlet-https
   dependencies:
   - component: mysql
-    ports:
+    portNames:
     - jdbc
   healthcheck:
     httpGet:

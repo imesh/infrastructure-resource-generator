@@ -1,9 +1,9 @@
 apiVersion: 0.1
 kind: Deployment
-name: WSO2 API Manager Pattern 1
+name: wso2-apim-pattern-1
 version: 2.1.0
 components:
-- name: WSO2 API Manager 1
+- name: wso2-apim-1
   codeName: wso2am
   version: 2.1.0
   cpu: 4
@@ -54,7 +54,7 @@ components:
       port: 9443
     initialDelaySeconds: 3
     periodSeconds: 3
-- name: WSO2 API Manager 2
+- name: wso2-apim-2
   codeName: wso2am
   version: 2.1.0
   cpu: 4
@@ -105,7 +105,7 @@ components:
       port: 9443
     initialDelaySeconds: 3
     periodSeconds: 3
-- name: WSO2 API-M Analytics
+- name: wso2-apim-analytics
   codeName: wso2am-analytics
   version: 2.1.0
   cpu: 4
@@ -142,7 +142,7 @@ components:
     createScript: database-scripts/wso2apim-analytics-db.sql
   dependencies:
   - component: api-analytics
-    ports:
+    portNames:
     - thrift-ssl
     - thrift
   healthcheck:
