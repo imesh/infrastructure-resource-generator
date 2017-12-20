@@ -9,7 +9,6 @@ import (
 	"strings"
 	"path/filepath"
 	"flag"
-	"fmt"
 	"strconv"
 )
 
@@ -164,25 +163,23 @@ func applyTemplate(templateFilePath string, outputFilePath string, data interfac
 	outputFile.Close()
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n", )
-	flag.PrintDefaults()
-	os.Exit(2)
-}
-
 func init() {
 	// Initialize glog
-	flag.Usage = usage
 	flag.Parse()
 	flag.Lookup("logtostderr").Value.Set("true")
 
 }
 
+// Generate infrastructure resources for a given deployment
 func generate(executionPath string, deploymentsFolderPath string, filePath string) {
 	deployment := getDeployment(filePath)
-	componentNamesMap := map[string]bool{}
+	generateDockerFiles(deployment, executionPath)
+	generateDockerComposeTemplate(executionPath, filePath, deploymentsFolderPath, deployment)
+}
 
-	// Generate dockerfiles
+// Generate dockerfiles for components found in a given deployment
+func generateDockerFiles(deployment *Deployment, executionPath string) {
+	componentNamesMap := map[string]bool{}
 	for _, component := range deployment.Components {
 		// Read component code name
 		codeName := component.CodeName
@@ -200,13 +197,16 @@ func generate(executionPath string, deploymentsFolderPath string, filePath strin
 		}
 
 		componentNamesMap[codeName] = true
-		templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker" + pathSeparator + "Dockerfile.tmpl"
+		templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker" + pathSeparator + "Dockerfile-template"
 		outputFilePath := executionPath + pathSeparator + "output" + pathSeparator + "docker" + pathSeparator + codeName + pathSeparator + "Dockerfile"
 		applyTemplate(templatePath, outputFilePath, component)
 	}
+}
 
+// Generate docker compose template for a given deployment
+func generateDockerComposeTemplate(executionPath string, filePath string, deploymentsFolderPath string, deployment *Deployment) {
 	// Generate docker compose template
-	templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker-compose" + pathSeparator + "docker-compose.tmpl"
+	templatePath := executionPath + pathSeparator + "templates" + pathSeparator + "docker-compose" + pathSeparator + "docker-compose-template.yaml"
 	outputFilePath := executionPath + pathSeparator + "output" + pathSeparator + "docker-compose"
 	// Append sub folder path
 	fileFolderPath := strings.Replace(filePath, filepath.Base(filePath), "", 1)
